@@ -45,9 +45,10 @@ pipeline {
             '''
         }
       }
-    }stage('Prepare Kubernetes') {
-    environment {
-      KUBECONFIG = credentials('config')
+    }
+    stage('Prepare Kubernetes') {
+      environment {
+        KUBECONFIG = credentials('config')
       }
       steps {
         script {
