@@ -183,7 +183,7 @@ pipeline {
           sh '''
             helm upgrade --install movie-app ./charts \
               --namespace  \
-              --create-namespace prod\
+              --create-namespace prod \
               --set movie.image.repository=$DOCKER_ID/$DOCKER_REPO \
               --set movie.image.tag=$MOVIE_IMAGE-$DOCKER_TAG \
               --set movie.image.pullPolicy=IfNotPresent \
