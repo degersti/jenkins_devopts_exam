@@ -164,6 +164,36 @@ pipeline {
         }
       }
     }
+    stage('Deployment in prod') {
+      when {
+        branch 'master'
+        beforeInput true
+      }
+      input {
+        message 'Deploy to production?'
+        ok 'Deploy'
+      }
+      environment {
+          KUBECONFIG = credentials('config')
+      }
+      steps {
+        script {
+          sh '''
+            helm upgrade --install movie-app ./charts \
+              --namespace staging \
+              --create-namespace \
+              --set movie.image.repository=$DOCKER_ID/$DOCKER_REPO \
+              --set movie.image.tag=$MOVIE_IMAGE-$DOCKER_TAG \
+              --set movie.image.pullPolicy=IfNotPresent \
+              --set cast.image.repository=$DOCKER_ID/$DOCKER_REPO \
+              --set cast.image.tag=$CAST_IMAGE-$DOCKER_TAG \
+              --set cast.image.pullPolicy=IfNotPresent \
+              --wait \
+              --timeout 5m
+          '''
+        }
+      }
+    }
   }
 }
 
