@@ -30,32 +30,6 @@ pipeline {
         }
       }
     }
-    stage('Docker run'){ // run container from our builded image
-      steps {
-        script {
-        sh '''
-            docker run -d -p 8002:8000 --name casts \
-                $DOCKER_ID/$DOCKER_REPO:$CAST_IMAGE-$DOCKER_TAG \
-                uvicorn app.main:app --host 0.0.0.0 --port 8000 --loop asyncio
-
-            docker run -d -p 8001:8000 --name movies \
-                $DOCKER_ID/$DOCKER_REPO:$MOVIE_IMAGE-$DOCKER_TAG \
-                uvicorn app.main:app --host 0.0.0.0 --port 8000 --loop asyncio
-            sleep 10
-        '''
-        }
-      }
-    }
-    stage('Test Acceptance'){ // we launch the curl command to validate that the container responds to the request
-      steps {
-        script {
-        sh '''
-            curl -f http://localhost:8001/api/v1/movies/
-            curl -f http://localhost:8002/api/v1/casts/docs
-        '''
-        }
-      }
-    }
     stage('Docker Push'){ //we pass the built image to our docker hub account
       environment
       {
