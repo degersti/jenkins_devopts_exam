@@ -1,3 +1,9 @@
+/*************************************************************
+   File:        Jenkinsfile
+   Author:      Markus Gerstenberg
+   
+   Description: Jenkinsfile for the DevOps exam
+************************************************************/
 pipeline {
   environment { // Declaration of environment variables
       DOCKER_ID = "degersti" // we will use this variable to store the docker hub account name
@@ -8,6 +14,9 @@ pipeline {
   }
   agent any // Jenkins will be able to select all available agents
   stages {
+    /*************************************************************
+      Build Docker Container
+    ************************************************************/
     stage(' Docker Build Casts'){ // docker build image stage
       steps {
         script {
@@ -30,6 +39,9 @@ pipeline {
         }
       }
     }
+    /*************************************************************
+      Push to Docker HUB
+    ************************************************************/
     stage('Docker Push'){ //we pass the built image to our docker hub account
       environment
       {
@@ -46,6 +58,9 @@ pipeline {
         }
       }
     }
+    /*************************************************************
+      Create Secrets in Kubernetes
+    ************************************************************/
     stage('Prepare Kubernetes') {
       environment {
         KUBECONFIG = credentials('config')
@@ -80,6 +95,9 @@ pipeline {
         }
       }
     }
+    /*************************************************************
+      Deoloy in Namespaces dev, qa, staging and prod
+    ************************************************************/
     stage('Deployment in dev') {
       environment {
           KUBECONFIG = credentials('config')
@@ -102,5 +120,50 @@ pipeline {
         }
       }
     }
+    stage('Deployment in qa') {
+      environment {
+          KUBECONFIG = credentials('config')
+      }
+      steps {
+        script {
+          sh '''
+            helm upgrade --install movie-app ./charts \
+              --namespace qa \
+              --create-namespace \
+              --set movie.image.repository=$DOCKER_ID/$DOCKER_REPO \
+              --set movie.image.tag=$MOVIE_IMAGE-$DOCKER_TAG \
+              --set movie.image.pullPolicy=IfNotPresent \
+              --set cast.image.repository=$DOCKER_ID/$DOCKER_REPO \
+              --set cast.image.tag=$CAST_IMAGE-$DOCKER_TAG \
+              --set cast.image.pullPolicy=IfNotPresent \
+              --wait \
+              --timeout 5m
+          '''
+        }
+      }
+    }
+    stage('Deployment in staging') {
+      environment {
+          KUBECONFIG = credentials('config')
+      }
+      steps {
+        script {
+          sh '''
+            helm upgrade --install movie-app ./charts \
+              --namespace staging \
+              --create-namespace \
+              --set movie.image.repository=$DOCKER_ID/$DOCKER_REPO \
+              --set movie.image.tag=$MOVIE_IMAGE-$DOCKER_TAG \
+              --set movie.image.pullPolicy=IfNotPresent \
+              --set cast.image.repository=$DOCKER_ID/$DOCKER_REPO \
+              --set cast.image.tag=$CAST_IMAGE-$DOCKER_TAG \
+              --set cast.image.pullPolicy=IfNotPresent \
+              --wait \
+              --timeout 5m
+          '''
+        }
+      }
+    }
   }
 }
+
