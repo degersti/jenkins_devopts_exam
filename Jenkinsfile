@@ -45,6 +45,61 @@ pipeline {
             '''
         }
       }
+    }stage('Prepare Kubernetes') {
+    environment {
+      KUBECONFIG = credentials('config')
+      }
+      steps {
+        script {
+          withCredentials([
+            string(credentialsId: 'MOVIE_DB_PASSWORD', variable: 'MOVIE_PASS'),
+            string(credentialsId: 'CAST_DB_PASSWORD', variable: 'CAST_PASS')
+          ]) {
+            sh '''
+              set -eu
+
+              for ns in dev qa staging prod; do
+                  kubectl create namespace "$ns" \
+                  --dry-run=client -o yaml | kubectl apply -f -
+
+                kubectl create secret generic movie-db-secret \
+                  --namespace "$ns" \
+                  --from-literal=postgres-password="$MOVIE_PASS" \
+                  --from-literal=database-uri="postgresql://movie_db_username:${MOVIE_PASS}@movie-db:5432/movie_db_dev" \
+                  --dry-run=client -o yaml | kubectl apply -f -
+
+                kubectl create secret generic cast-db-secret \
+                  --namespace "$ns" \
+                  --from-literal=postgres-password="$CAST_PASS" \
+                  --from-literal=database-uri="postgresql://cast_db_username:${CAST_PASS}@cast-db:5432/cast_db_dev" \
+                  --dry-run=client -o yaml | kubectl apply -f -
+                done
+            '''
+          }
+        }
+      }
+    }
+    stage('Deployment in dev') {
+      environment {
+          KUBECONFIG = credentials('config')
+      }
+      steps {
+        script {
+          sh '''
+            helm upgrade --install movie-app ./charts \
+              --namespace dev \
+              --create-namespace \
+              --set movie.image.repository=$DOCKER_ID/$DOCKER_REPO \
+              --set movie.image.tag=$MOVIE_IMAGE-$DOCKER_TAG \
+              --set movie.image.pullPolicy=IfNotPresent \
+              --set cast.image.repository=$DOCKER_ID/$DOCKER_REPO \
+              --set cast.image.tag=$CAST_IMAGE-$DOCKER_TAG \
+              --set cast.image.pullPolicy=IfNotPresent \
+              --wait \
+              --timeout 5m
+          '''
+        }
+      }
     }
   }
 }
