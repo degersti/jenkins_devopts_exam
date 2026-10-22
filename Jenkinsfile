@@ -34,8 +34,13 @@ pipeline {
       steps {
         script {
         sh '''
-            docker run -d -p 8002:8000 --name casts $DOCKER_ID/$DOCKER_REPO:$CAST_IMAGE-$DOCKER_TAG
-            docker run -d -p 8001:8000 --name movies $DOCKER_ID/$DOCKER_REPO:$MOVIE_IMAGE-$DOCKER_TAG
+            docker run -d -p 8002:8000 --name casts \
+                $DOCKER_ID/$DOCKER_REPO:$CAST_IMAGE-$DOCKER_TAG \
+                uvicorn app.main:app --host 0.0.0.0 --port 8000 --loop asyncio
+
+            docker run -d -p 8001:8000 --name movies \
+                $DOCKER_ID/$DOCKER_REPO:$MOVIE_IMAGE-$DOCKER_TAG \
+                uvicorn app.main:app --host 0.0.0.0 --port 8000 --loop asyncio
             sleep 10
         '''
         }
