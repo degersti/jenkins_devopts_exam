@@ -166,8 +166,10 @@ pipeline {
     }
     stage('Deployment in prod') {
       when {
-        branch 'master'
         beforeInput true
+        expression {
+            env.GIT_BRANCH == 'origin/master'
+        }
       }
       input {
         message 'Deploy to production?'
